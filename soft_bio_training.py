@@ -1,5 +1,5 @@
 import  tensorflow as tf
-import  gender_train_data as train_data
+import  data_prep as train_data
 import  cv2
 import  random
 import  matplotlib.pyplot as plt
@@ -7,7 +7,7 @@ import  numpy as np
 from sklearn.metrics import confusion_matrix, classification_report
 
 train_epochs=3000
-batch_size = 9  #batch normalization 
+batch_size = 9  #batch
 drop_prob = 0.3 #dropout probability
 learning_rate=0.00001
 
@@ -27,7 +27,7 @@ def bias_init(shape):
 # input images with size 224*224
 # input labels of race 1-asian 2-black 3-caucasian 4-hispanic
 images_input = tf.placeholder(tf.float32, [None,224*224*3], name='input_images')
-labels_input = tf.placeholder(tf.float32, [None,4], name='input_labels')
+labels_input = tf.placeholder(tf.float32, [None,2], name='input_labels')
 
 # initialize fully connected layer !!!!!!!!!!!!!!!!!!!!!!!!!
 def fch_init(layer1,layer2,const=1):
@@ -40,6 +40,7 @@ def conv2d(images,weight,stride):
     return tf.nn.conv2d(images, weight, strides=[1,stride,stride,1], padding='SAME')
 
 def depthwise_conv2d(images, weight, stride):
+    # returns NHWC
     return tf.nn.depthwise_conv2d(images, weight, strides=[1, stride, stride, 1], padding='SAME')
 
 def avg_pool7x7(images,tname):
@@ -54,7 +55,8 @@ def bn_relu(images, tname):
 x_input = tf.reshape(images_input, [-1,224,224,3])
 
 def MBNet(images, cin, cout, stride, tname):
-    dw_w = weight_init([3,3,cin,cin])
+    # input images is NHWC why 1024?
+    dw_w = weight_init([3,3,cin,1]) # last dimension is channel multiplier here
     dw_b = bias_init([cin])
     conv_w = weight_init([1,1,cin,cout])
     conv_b = bias_init([cout])
@@ -127,13 +129,16 @@ f_softmax = tf.nn.softmax(f_r2,name='f_softmax')
 cross_entry =  tf.reduce_mean(tf.reduce_sum(-labels_input*tf.log(f_softmax)))
 optimizer  = tf.train.AdamOptimizer(learning_rate).minimize(cross_entry)
 
-#计算准确率
+#calculating preccision & loss
 arg1 = tf.argmax(labels_input,1)
 arg2 = tf.argmax(f_softmax,1)
 cos = tf.equal(arg1,arg2)
 acc = tf.reduce_mean(tf.cast(cos,dtype=tf.float32))
 
 
+
+
+# start
 init = tf.global_variables_initializer()
 
 sess = tf.Session()
@@ -150,12 +155,12 @@ for i in range(train_epochs):
     batch= random.randint(6,18)
     train_input = train_data.images[idx:(idx+batch)]
     train_labels = train_data.labels[idx:(idx+batch)]
-    result,acc1,cross_entry_r,cos1,f_softmax1,relu_1_r= sess.run([optimizer,acc,cross_entry,cos,f_softmax,relu_1],feed_dict={images_input:train_input,labels_input:train_labels})
+    result,acc1,cross_entry_r,cos1,f_softmax1,bn_relu_1_r= sess.run([optimizer,acc,cross_entry,cos,f_softmax,bn_relu_1],feed_dict={images_input:train_input,labels_input:train_labels})
     print (acc1)
     Cost.append(cross_entry_r)
     Accuracy.append(acc1)
 
-# 代价函数曲线
+# loss function curve
 fig1,ax1 = plt.subplots(figsize=(10,7))
 plt.plot(Cost)
 ax1.set_xlabel('Epochs')
@@ -164,7 +169,7 @@ plt.title('Cross Loss')
 plt.grid()
 plt.show()
 
-# 准确率曲线
+# precission curve
 fig7,ax7 = plt.subplots(figsize=(10,7))
 plt.plot(Accuracy)
 ax7.set_xlabel('Epochs')
@@ -174,12 +179,12 @@ plt.grid()
 plt.show()
 
 
-#测试
+# run test
 arg2_r = sess.run(arg2,feed_dict={images_input:train_data.test_images,labels_input:train_data.test_labels})
 arg1_r = sess.run(arg1,feed_dict={images_input:train_data.test_images,labels_input:train_data.test_labels})
 
 print (classification_report(arg1_r, arg2_r))
 
-#保存模型
+# save model
 saver = tf.train.Saver()
-saver.save(sess, './model/my-gender-v1.0')
+saver.save(sess, './model/MBNet-gender-v1.0')
