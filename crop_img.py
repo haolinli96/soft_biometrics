@@ -9,15 +9,18 @@ for root, dirs, files in os.walk(file_dir):
         for root_1, dirs_1, files_1 in os.walk(dir_path):
             for file_name in files_1:
                 file_path = os.path.join(dir_path, file_name)
-                #print(file_path)
+                print(file_path)
                 img = cv2.imread(file_path)
+
                 if img is None:
                     continue
                 u, v, d = img.shape
                 #count += 1
                 print(u, v)
                 resize = cv2.resize(img, (224, 224))
+                gray = cv2.cvtColor(resize, cv2.COLOR_BGR2GRAY)
+                #cv2.imshow("Converted Image",gray)
 
-                cv2.imwrite(file_path, resize)
+                cv2.imwrite(file_path, gray)
 
 #print(count)

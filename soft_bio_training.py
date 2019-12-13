@@ -6,9 +6,9 @@ import  matplotlib.pyplot as plt
 import  numpy as np
 from sklearn.metrics import confusion_matrix, classification_report
 
-train_epochs=3000
+train_epochs=4000
 batch_size = 9  #batch
-drop_prob = 0.3 #dropout probability
+drop_prob = 0.35 #dropout probability
 learning_rate=0.00001
 
 
@@ -186,5 +186,5 @@ arg1_r = sess.run(arg1,feed_dict={images_input:train_data.test_images,labels_inp
 print (classification_report(arg1_r, arg2_r))
 
 # save model
-saver = tf.train.Saver()
-saver.save(sess, './model/MBNet-gender-v1.0')
+saver = tf.compat.v1.train.Saver()
+saver.save(sess, './model/MBNet-gender-v2.0')
